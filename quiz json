@@ -1,0 +1,128 @@
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert'; // JSON-ыг буцаах
+
+void main() {
+runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+@override
+Widget build(BuildContext context) {
+return MaterialApp(
+title: 'Flutter JSON Example',
+theme: ThemeData(
+primarySwatch: Colors.blue,
+),
+home: UserListScreen(),
+);
+}
+}
+
+class UserListScreen extends StatefulWidget {
+@override
+_UserListScreenState createState() => _UserListScreenState();
+}
+
+class _UserListScreenState extends State<UserListScreen> {
+late Future<List<User>> users;
+
+// API-ээс өгөгдөл татах
+Future<List<User>> fetchUsers() async {
+final response =
+await http.get(Uri.parse('https://jsonplaceholder.typicode.com/users&#39;));
+
+if (response.statusCode == 200) {
+List<dynamic> data = jsonDecode(response.body); // JSON-ыг парслах
+return data.map((user) => User.fromJson(user)).toList();
+} else {
+throw Exception('API-с өгөгдөл авахад алдаа гарлаа!');
+}
+}
+
+@override
+void initState() {
+super.initState();
+users = fetchUsers(); // API-ээс өгөгдөл татаж авах
+}
+
+@override
+Widget build(BuildContext context) {
+return Scaffold(
+appBar: AppBar(title: Text('Users List')),
+body: FutureBuilder<List<User>>(
+future: users, // API-ийн өгөгдөл
+builder: (context, snapshot) {
+if (snapshot.connectionState == ConnectionState.waiting) {
+return Center(child: CircularProgressIndicator()); // Хүлээлт
+} else if (snapshot.hasError) {
+return Center(child: Text('Алдаа: ${snapshot.error}'));
+} else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+return Center(child: Text('Өгөгдөл байхгүй'));
+} else {
+// Үр дүнг харуулах
+return ListView.builder(
+itemCount: snapshot.data!.length,
+itemBuilder: (context, index) {
+var user = snapshot.data![index];
+return ListTile(
+title: Text(user.name),
+subtitle: Text('${user.email} ${user.username}'),
+trailing: Text(user.address.city), // Хаягийн хот
+);
+},
+);
+}
+},
+),
+);
+}
+}
+
+// JSON өгөгдлийг задалж, User объект руу хөрвүүлэх
+class User {
+String name;
+String email;
+String username;
+Address address;
+
+User({
+required this.name,
+required this.email,
+required this.username,
+required this.address,
+});
+
+factory User.fromJson(Map<String, dynamic> json) {
+return User(
+name: json['name'],
+email: json['email'],
+username: json['username'],
+address: Address.fromJson(json['address']), // Хаяг мэдээллийг авна
+);
+}
+}
+
+// Хаягийн мэдээллийг хадгалах Address классыг үүсгэх
+class Address {
+String street;
+String suite;
+String city;
+String zipcode;
+
+Address({
+required this.street,
+required this.suite,
+required this.city,
+required this.zipcode,
+});
+
+factory Address.fromJson(Map<String, dynamic> json) {
+return Address(
+street: json['street'],
+suite: json['suite'],
+city: json['city'],
+zipcode: json['zipcode'],
+);
+}
+}
